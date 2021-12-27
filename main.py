@@ -4,7 +4,7 @@ from keras.utils import np_utils
 
 import matplotlib.pyplot as plt
 from dense import Dense
-from convolutional import Convolutional
+from mconv import Mconv
 from reshape import Reshape
 from BatchNormalisation import BatchNormalisation
 from MaxPool import MaxPool
@@ -31,12 +31,12 @@ y_test = np_utils.to_categorical(y_test, 10)
 
 #neural network
 network = [
-    Convolutional(20, (10,4,28,28)),
+    Mconv(20, (10,4,28,28)),
     BatchNormalisation(),
     MaxPool(),
     relu(),
     
-    Convolutional(40, (20,4,13,13)),
+    Mconv(40, (20,4,13,13)),
     BatchNormalisation(),
     MaxPool(),
     relu(),

@@ -5,7 +5,7 @@ from layer import Layer
 from sklearn.cluster import KMeans
 import random 
 
-class Convolutional(Layer):
+class Mconv(Layer):
     def __init__(self, n_filters, input_shape, kernel_size = 3, Mfilter_shape = (4, 3, 3), depth = 4):
         
         self.input_shape = input_shape
