@@ -1,0 +1,9 @@
+train(
+    network,
+    binary_cross_entropy,
+    binary_cross_entropy_prime,
+    x_train,
+    y_train,
+    epochs=100,
+    learning_rate=0.1
+)

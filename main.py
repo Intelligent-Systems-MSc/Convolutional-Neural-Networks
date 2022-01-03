@@ -2,15 +2,11 @@ import numpy as np
 from keras.datasets import mnist
 from keras.utils import np_utils
 
-import matplotlib.pyplot as plt
 from dense import Dense
-from mconv import Mconv
+from convolutional import Convolutional
 from reshape import Reshape
-from BatchNormalisation import BatchNormalisation
-from MaxPool import MaxPool
-from activations import Sigmoid, relu
-from reshape import Reshape
-from losses import softmax_loss, softmax_loss_prime
+from activations import Sigmoid, Softmax, Tanh
+from losses import binary_cross_entropy, binary_cross_entropy_prime,mse_prime,mse,cross_entropy,cross_entropy_prime
 from network import train, predict
 
 def copy4 (x_tr):
@@ -19,73 +15,53 @@ def copy4 (x_tr):
         x_tr_prime[i] = np.array([x_tr[i], x_tr[i], x_tr[i], x_tr[i] ])
     return x_tr_prime
 
+
+def preprocess_data(x, y, limit):
+    x = x[:limit]
+    y = y[:limit]
+    #x = x.reshape(limit, 4, 28, 28)
+    x = x.astype("float32") / 255
+    x = x.reshape(x.shape[0],1,x.shape[1],x.shape[2],x.shape[3])
+    y = np_utils.to_categorical(y)
+    y = y.reshape(len(y), 10, 1)
+    return x, y
+
 # load MNIST from server, limit to 100 images per class since we're not training on GPU
 (x_train, y_train), (x_test, y_test) = mnist.load_data()
+x_train = copy4(x_train)
+x_test = copy4(x_test)
 
-# Normaliser les données
-x_train= x_train.astype('float32')/float(x_train.max())
-x_test= x_test.astype('float32')/float(x_test.max())
-y_train = np_utils.to_categorical(y_train, 10)
-y_test = np_utils.to_categorical(y_test, 10)
+x_train, y_train = preprocess_data(x_train, y_train, 150)
+x_test, y_test = preprocess_data(x_test, y_test, 150)
 
-
-#neural network
 network = [
-    Mconv(20, (10,4,28,28)),
-    BatchNormalisation(),
-    MaxPool(),
-    relu(),
-    
-    Mconv(40, (20,4,13,13)),
-    BatchNormalisation(),
-    MaxPool(),
-    relu(),
-
-
-    Reshape((40,4,5,5), (40,4*5*5)),
-    Dense(1024, (40,4*5*5)),
-    Dense(10, (40,1024)),
-    Sigmoid()
+    Convolutional((1,4, 28, 28), 3, 10),#20*4*26*26
+    Tanh(),
+    Convolutional((10,4,26,26),3, 20),
+    Tanh(),
+    Convolutional((20,4,24,24),3, 40),
+    Tanh(),
+    Reshape((40,4,22, 22), (40*4*22*22,1)),
+    Dense(40*4*22*22, 100),
+    Tanh(),
+    Dense(100, 10),
+    Softmax()
 ]
 
 # train
+print("ok")
+train(
+    network,
+    binary_cross_entropy,
+    binary_cross_entropy_prime,
+    x_train,
+    y_train,
+    epochs=100,
+    learning_rate=0.1
+)
+
 # test
-epochs = 1
-batch_size = 64
-nb_batch = int(x_train.shape[0]/batch_size)
-theta = 0.001
-learning_rate = 0.001
-verbose = True
-
-x = x_train[0:10]
-
-
-for e in range(epochs):
-        error = 0
-        for i in range(nb_batch + 1):
-            if i == nb_batch:
-                batch = x_train[i*batch_size: (i+1)*batch_size + (x_train.shape[0] - nb_batch*batch_size)]
-                y = y_train[i*batch_size: (i+1)*batch_size + (x_train.shape[0] - nb_batch*batch_size)]
-            else:
-                batch =x_train[i*batch_size: (i+1)*batch_size]
-                y =y_train[i*batch_size: (i+1)*batch_size]
-            
-            # copy
-            
-            batch = copy4(batch)
-            # forward
-            output = predict(network, batch)
-
-            # error
-            error += softmax_loss(y, output)
-
-            # backward
-            """grad = softmax_loss_prime(y, output)
-            for layer in reversed(network):
-                grad = layer.backward(grad, theta ,learning_rate)"""
-
-        error /= len(batch)
-        if verbose:
-            print(f"{e + 1}/{epochs}, error={error}")
-            
-    
+for x, y in zip(x_test, y_test):
+    output = predict(network, x)
+    print(f"pred: {np.argmax(output)}, true: {np.argmax(y)}")
+    #print("pred: %f), true: %f",np.argmax(output),np.argmax(y))
